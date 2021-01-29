@@ -1,13 +1,7 @@
-const express = require('express');
-const path = require ('path');
-const bodyParser = require('body-parser');
+const server = require("./api/server.js");
 
-// routes
+const port = process.env.PORT || 5000;
 
-const routes = require('./routes/api.js');
-
-const app = express(); 
-
-app.use('/api', routes); 
-
-module.exports = app; 
+server.listen(port, () => {
+    console.log(`\n *** server running on ${port}! *** \n`);
+});
