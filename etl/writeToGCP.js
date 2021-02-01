@@ -1,7 +1,6 @@
 const fs = require("fs");
 const path = require("path");
 const { Storage } = require("@google-cloud/storage");
-const { collectionsInfo } = require("../collections/collectionsInfo");
 
 // to do update the creds with GCP creds & Project Name
 // Complete -- AMR
@@ -13,44 +12,65 @@ const storage = new Storage({
 });
 
 //explicitly set the file type to csv to do get this set
-
+// ??????????????????????????????????????????????????
 const metadata = {
     sourceFormat: "CSV",
     skipLeadingRows: 1,
 };
 
-const collections = collectionsInfo();
-
-const writeAll = (collections) => {
+const writeAll = async (collections) => {
     for (const collection of collections) {
-        writeToGCP(collection.collectionName, collection.collectionFunction);
+        await writeToGCP(
+            collection.collectionName,
+            collection.collectionFunction,
+            collection.gcpBucket,
+            collection.query
+        );
     }
 };
 
-async function writeToGCP(collectionName, collectionFunction) {
-    //to do - right now this manually being done - iterate through and update collection to call the appropriate database to write the csv file
-    const data = await collectionFunction();
+async function writeToGCP(
+    collectionName,
+    collectionFunction,
+    gcpBucket,
+    query
+) {
+    // to do - right now this manually being done - iterate through and update collection to call the appropriate database to write the csv file
+    // Complete -- AMR
+    const data = await collectionFunction(collectionName, query);
 
-    console.log("data from collectionFunction", data);
+    console.log(`collectionFunction for ${collectionName} complete`);
 
-    // const bucketName = storage.bucket("replicaliper");
+    const bucketName = storage.bucket(gcpBucket);
 
-    // //to do - right now manually updating the name of the file- similar to line 25 - make line 32 write file to the appropriate collection automatically
-    // const file = bucketName.file(collectionName);
-    // //update file to JSON
-    // await fs
-    //     .createReadStream(`../tmp/${collectionName}.csv`)
-    //     .pipe(file.createWriteStream())
+    //to do - right now manually updating the name of the file- similar to line 25 - make line 32 write file to the appropriate collection automatically
+    // Complete -- AMR
 
-    //     .on("error", function (err) {
-    //         console
-    //             .log("error line 19 " + err)
+    // Use time stamp for file name
+    const timeStamp = Date.now();
 
-    //             .on("finish", function () {
-    //                 console.log("file upload complete");
-    //             });
-    //     });
+    const file = bucketName.file(timeStamp);
+
+    // to do - update file to JSON
+    // Complete -- AMR
+    await fs
+        .createReadStream(`./tmp/${collectionName}.json`)
+        .pipe(file.createWriteStream())
+
+        .on("error", (err) => {
+            console.log("GCP upload error", err);
+        })
+        .on("finish", () => {
+            console.log(`${collectionName} file uploaded`);
+            // if upload is successful, delete file
+            fs.unlink(`./tmp/${collectionName}.json`, (err) => {
+                if (err) {
+                    console.log("error deleting file", err);
+                } else {
+                    console.log(`${collectionName} file deleted`);
+                }
+            });
+        });
 }
 
-writeAll(collections);
-// module.exports = { writeToGCP };
+module.exports = { writeAll };

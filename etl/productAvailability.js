@@ -1,14 +1,9 @@
-const json2Csv = require("json2csv").Parser;
 const { retrieveCollection } = require("./mdbExtract");
 const fs = require("fs");
 
-// variables for retrieveCollection
-const collectionName = "caliper.co.wholesale.productAvailability";
-const query = {};
-
 const newArray = [];
 
-async function writeProductAvail() {
+async function writeProductAvail(collectionName, query) {
     const buildSheet = await retrieveCollection(query, collectionName);
 
     const headers = [
@@ -51,16 +46,15 @@ async function writeProductAvail() {
 
     newArray.unshift(headers);
 
-    console.log("data from productAvailability", newArray);
+    // console.log("data from productAvailability", newArray);
 
-    const data = new json2Csv({ header: false });
-    const csvData = data.parse(newArray);
+    const data = JSON.stringify(newArray);
 
-    fs.writeFile("../tmp/productAvailability.csv", csvData, function (error) {
+    fs.writeFile(`./tmp/${collectionName}.json`, data, function (error) {
         if (error) {
-            console.log("error in writing products file", error);
+            console.log("error in writing productAvailability file", error);
         } else {
-            console.log("products file created");
+            console.log("productAvailability file created");
         }
     });
 }

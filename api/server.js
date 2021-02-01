@@ -1,16 +1,18 @@
 const express = require("express");
-const path = require("path");
 
-require("dotenv").config({ path: "../.env" });
+// config for .env variables
+require("dotenv").config({ path: "./.env" });
 
-const etlRouter = require("../routers/etlRouter");
-
+// server
 const server = express();
 
+// use json
 server.use(express.json());
 
-server.use("/api/etl", etlRouter);
+// call etlRouter for /api/etl requests
+server.use("/api/etl", require("../routers/etlRouter"));
 
+// test to check if server is running
 server.get("/", (req, res) => {
     res.status(200).json({ message: "Server is running" });
 });

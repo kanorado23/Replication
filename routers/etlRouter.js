@@ -1,12 +1,12 @@
 const router = require("express").Router();
-const { writeToGCP } = require("../etl/writeToGCP");
+const { writeAll } = require("../etl/writeToGCP");
 const { collectionsInfo } = require("../collections/collectionsInfo");
 
 router.get("/", async (req, res) => {
     const collections = collectionsInfo();
 
     try {
-        await writeToGCP(collections);
+        await writeAll(collections);
         res.status(200).json({
             message: "ETL successful",
         });
@@ -18,3 +18,5 @@ router.get("/", async (req, res) => {
         });
     }
 });
+
+module.exports = router;
