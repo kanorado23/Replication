@@ -11,13 +11,6 @@ const storage = new Storage({
     projectId: projectID,
 });
 
-//explicitly set the file type to csv to do get this set
-// ??????????????????????????????????????????????????
-const metadata = {
-    sourceFormat: "CSV",
-    skipLeadingRows: 1,
-};
-
 const writeAll = async (collections) => {
     for (const collection of collections) {
         await writeToGCP(
@@ -37,7 +30,7 @@ async function writeToGCP(
 ) {
     // to do - right now this manually being done - iterate through and update collection to call the appropriate database to write the csv file
     // Complete -- AMR
-    const data = await collectionFunction(collectionName, query);
+    await collectionFunction(collectionName, query);
 
     console.log(`collectionFunction for ${collectionName} complete`);
 
@@ -49,7 +42,7 @@ async function writeToGCP(
     // Use time stamp for file name
     const timeStamp = Date.now();
 
-    const file = bucketName.file(timeStamp);
+    const file = bucketName.file(`${timeStamp}.json`);
 
     // to do - update file to JSON
     // Complete -- AMR

@@ -23,7 +23,6 @@ async function retrieveCollection(query, collectionName) {
             .db(databaseName)
             .collection(collectionName)
             .find(query)
-            .limit(3)
             .toArray();
         //   console.log("data from retrieveCollection", data);
         return data;
