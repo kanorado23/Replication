@@ -1,19 +1,15 @@
+// setup
 const mongodb = require("mongodb");
 const MongoClient = mongodb.MongoClient;
 
-// to do update with credentials and collection
-// Complete -- AMR
-
+// gcp creds/connection info
 const username = process.env.MDB_USERNAME;
 const pwd = process.env.MDB_PWD;
 const databaseName = process.env.MDB_DATABASE_NAME;
 
 const connectionURL = `mongodb+srv://${username}:${pwd}@stillwatercluster.bh9wd.gcp.mongodb.net/${databaseName}?retryWrites=true&w=majority`;
 
-// to do rather than doing the calls to each collection manually, refactor so it's one function calls each
-// collection name to iterate over the collection names
-// Complete -- AMR
-
+// retrieve and return collection from MongoDB
 async function retrieveCollection(query, collectionName) {
     const client = new MongoClient(connectionURL, { useUnifiedTopology: true });
 
@@ -23,6 +19,7 @@ async function retrieveCollection(query, collectionName) {
             .db(databaseName)
             .collection(collectionName)
             .find(query)
+            // .limit(3)
             .toArray();
         //   console.log("data from retrieveCollection", data);
         return data;

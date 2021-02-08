@@ -1,7 +1,9 @@
+// setup/imports
 const router = require("express").Router();
 const { writeAll } = require("../etl/writeToGCP");
 const { collectionsInfo } = require("../collections/collectionsInfo");
 
+// handles /api/etl get requests
 router.get("/", async (req, res) => {
     const collections = collectionsInfo();
 
