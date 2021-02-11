@@ -35,7 +35,8 @@ async function writeToGCP(collectionName, query) {
 
     // gcp bucket/file/metadata info
     const bucketName = storage.bucket(gcpBucket);
-    const file = bucketName.file(`${collectionName}-${Date.now()}.jsonl`);
+    // const file = bucketName.file(`${collectionName}-${Date.now()}.jsonl`);
+    const file = bucketName.file(`${collectionName}.jsonl`);
     const metadata = { metadata: { contentType: "application/octet-stream" } };
 
     // writes file to gcp and deletes file when successful
