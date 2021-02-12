@@ -1,6 +1,6 @@
 const collections = [
     {
-        collectionName: process.env.MDB_PRODUCTCS_COLLECTION_NAME,
+        collectionName: process.env.MDB_PRODUCTS_COLLECTION_NAME,
         query: {},
     },
     {

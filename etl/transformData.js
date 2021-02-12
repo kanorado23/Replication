@@ -19,6 +19,8 @@ async function transformData(collectionName, query) {
     // retrieves collection data
     let buildSheet = await retrieveCollection(query, collectionName);
 
+    console.log(buildSheet);
+
     // replaces _id with mdb_id in each object
     for (i in buildSheet) {
         if (buildSheet[i]["_id"]) {
@@ -31,7 +33,9 @@ async function transformData(collectionName, query) {
             // filters nested layer of object keys
             if (
                 typeof buildSheet[i][j] === "object" &&
-                buildSheet[i][j] !== null
+                buildSheet[i][j] !== null &&
+                j !== "mdb_id" &&
+                !Array.isArray(buildSheet[i][j])
             ) {
                 buildSheet[i][j] = filterObjectKeys(buildSheet[i][j]);
             }
@@ -40,18 +44,22 @@ async function transformData(collectionName, query) {
         newStr += JSON.stringify(buildSheet[i]) + "\n";
     }
 
-    // console.log(
-    //     `\n \n Transformed data for ${collectionName} \n ${newStr} \n \n`
-    // );
+    console.log(
+        `\n \n Transformed data for ${collectionName} \n ${newStr} \n \n`
+    );
 
     // writes jsonl file in tmp folder
-    fs.writeFile(`./tmp/${collectionName}.jsonl`, newStr, function (error) {
-        if (error) {
-            console.log(`error in writing ${collectionName} file`, error);
-        } else {
-            console.log(`${collectionName} file created`);
+    await fs.writeFile(
+        `./tmp/${collectionName}.jsonl`,
+        newStr,
+        function (error) {
+            if (error) {
+                console.log(`error in writing ${collectionName} file`, error);
+            } else {
+                console.log(`${collectionName} file created`);
+            }
         }
-    });
+    );
 }
 
 module.exports = { transformData };
