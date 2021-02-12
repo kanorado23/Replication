@@ -19,8 +19,6 @@ async function transformData(collectionName, query) {
     // retrieves collection data
     let buildSheet = await retrieveCollection(query, collectionName);
 
-    console.log(buildSheet);
-
     // replaces _id with mdb_id in each object
     for (i in buildSheet) {
         if (buildSheet[i]["_id"]) {
@@ -44,9 +42,9 @@ async function transformData(collectionName, query) {
         newStr += JSON.stringify(buildSheet[i]) + "\n";
     }
 
-    console.log(
-        `\n \n Transformed data for ${collectionName} \n ${newStr} \n \n`
-    );
+    // console.log(
+    //     `\n \n Transformed data for ${collectionName} \n ${newStr} \n \n`
+    // );
 
     // writes jsonl file in tmp folder
     await fs.writeFile(
