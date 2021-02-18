@@ -2,10 +2,12 @@
 const router = require("express").Router();
 const { writeAll } = require("../etl/writeToGCP");
 const { collectionsInfo } = require("../collections/collectionsInfo");
+const { getCollectionNames } = require("../collections/retrievedCollections");
 
 // handles /api/etl get requests
 router.get("/", async (req, res) => {
-    const collections = collectionsInfo();
+    // const collections = collectionsInfo();
+    const collections = await getCollectionNames();
 
     try {
         await writeAll(collections);
