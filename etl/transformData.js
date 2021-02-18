@@ -1,6 +1,6 @@
 // setup/imports
 const { retrieveCollection } = require("./mdbExtract");
-const fs = require("fs");
+const fs = require("fs").promises;
 
 // replaces any character in object keys that is not a letter, number, or underscore with underscore
 const filterObjectKeys = (obj) => {
@@ -12,52 +12,70 @@ const filterObjectKeys = (obj) => {
     return newObj;
 };
 
-// create .jsonl file from retrieved data
-async function transformData(collectionName, query) {
+// transforms data from array and creates jsonl file
+const transformAndCreateFile = async (arr, collectionName) => {
     let newStr = "";
 
+    for (i in arr) {
+        // changes key from _id to mdb_id
+        if (arr[i]["_id"]) {
+            arr[i] = { mdb_id: arr[i]["_id"], ...arr[i] };
+            delete arr[i]["_id"];
+        }
+
+        // filters first layer of object keys
+        arr[i] = filterObjectKeys(arr[i]);
+        for (j in arr[i]) {
+            // filters nested layer of object keys
+            if (
+                typeof arr[i][j] === "object" &&
+                arr[i][j] !== null &&
+                j !== "mdb_id" &&
+                !Array.isArray(arr[i][j])
+            ) {
+                arr[i][j] = filterObjectKeys(arr[i][j]);
+            }
+        }
+
+        // add new line to newStr
+        newStr += JSON.stringify(arr[i]) + "\n";
+    }
+
+    // writes jsonl file in tmp folder
+    try {
+        await fs.writeFile(`./tmp/${collectionName}.jsonl`, newStr);
+        console.log(`${collectionName} file created`);
+    } catch (error) {
+        console.log(`error in writing ${collectionName} file`, error);
+    }
+};
+
+// create .jsonl file from retrieved data
+async function transformData(collectionName, query) {
     // retrieves collection data
     let buildSheet = await retrieveCollection(query, collectionName);
 
-    // replaces _id with mdb_id in each object
-    for (i in buildSheet) {
-        if (buildSheet[i]["_id"]) {
-            buildSheet[i] = { mdb_id: buildSheet[i]["_id"], ...buildSheet[i] };
-            delete buildSheet[i]["_id"];
-        }
-        // filters first layer of object keys
-        buildSheet[i] = filterObjectKeys(buildSheet[i]);
-        for (j in buildSheet[i]) {
-            // filters nested layer of object keys
-            if (
-                typeof buildSheet[i][j] === "object" &&
-                buildSheet[i][j] !== null &&
-                j !== "mdb_id" &&
-                !Array.isArray(buildSheet[i][j])
-            ) {
-                buildSheet[i][j] = filterObjectKeys(buildSheet[i][j]);
-            }
+    // if buildSheet has more than 5000 items, create files 5000 items at a time
+    if (buildSheet.length > 5000) {
+        let start = 0;
+        let end = 5000;
+        let buildSheetArr = [];
+
+        while (start < buildSheet.length) {
+            const subBuildSheet = buildSheet.slice(start, end);
+            buildSheetArr.push(subBuildSheet);
+            start += 5000;
+            end =
+                end + 5000 < buildSheet.length ? end + 5000 : buildSheet.length;
         }
 
-        newStr += JSON.stringify(buildSheet[i]) + "\n";
+        for (let i in buildSheetArr) {
+            transformAndCreateFile(buildSheetArr[i], `${collectionName}-${i}`);
+        }
+        // if fewer than 5000 items, creates single file
+    } else if (buildSheet.length <= 5000) {
+        transformAndCreateFile(buildSheet, collectionName);
     }
-
-    // console.log(
-    //     `\n \n Transformed data for ${collectionName} \n ${newStr} \n \n`
-    // );
-
-    // writes jsonl file in tmp folder
-    await fs.writeFile(
-        `./tmp/${collectionName}.jsonl`,
-        newStr,
-        function (error) {
-            if (error) {
-                console.log(`error in writing ${collectionName} file`, error);
-            } else {
-                console.log(`${collectionName} file created`);
-            }
-        }
-    );
 }
 
 module.exports = { transformData };

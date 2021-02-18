@@ -14,49 +14,54 @@ const storage = new Storage({
 // writeToGCP for each collection in list
 const writeAll = async (collections) => {
     for (const collection of collections) {
-        await writeToGCP(collection.collectionName, collection.query);
-    }
-};
-
-// write file to GCP then delete file when finished
-async function writeToGCP(collectionName, query) {
-    // creates file to be loaded to GCP
-    await transformData(collectionName, query);
-
-    console.log(`collectionFunction for ${collectionName} complete`);
-
-    // gcp buckte name for caliper or stillwater
-    let gcpBucket;
-    if (collectionName.includes("caliper")) {
-        gcpBucket = process.env.GCP_CALIPER_BUCKET_NAME;
-    } else if (collectionName.includes("stillwater")) {
-        gcpBucket = process.env.GCP_STILLWATER_BUCKET_NAME;
+        await transformData(
+            collection.collectionName,
+            collection.query ? collection.query : {}
+        );
     }
 
-    // gcp bucket/file/metadata info
-    const bucketName = storage.bucket(gcpBucket);
-    // const file = bucketName.file(`${collectionName}-${Date.now()}.jsonl`);
-    const file = bucketName.file(`${collectionName}.jsonl`);
-    const metadata = { metadata: { contentType: "application/octet-stream" } };
+    // create array of files in tmp/
+    const fileNames = fs
+        .readdirSync("./tmp/")
+        .filter((file) => file !== ".DS_Store");
 
-    // writes file to gcp and deletes file when successful
-    await fs
-        .createReadStream(`./tmp/${collectionName}.jsonl`)
-        .pipe(file.createWriteStream(metadata))
-        .on("error", (err) => {
-            console.log("GCP upload error", err);
-        })
-        .on("finish", () => {
-            console.log(`${collectionName} file uploaded`);
-            // if upload is successful, delete file
-            fs.unlink(`./tmp/${collectionName}.jsonl`, (err) => {
-                if (err) {
-                    console.log("error deleting file", err);
-                } else {
-                    console.log(`${collectionName} file deleted`);
-                }
+    // console.log("file names", fileNames);
+
+    fileNames.forEach(async (file) => {
+        // gcp buckte name for caliper or stillwater
+        let gcpBucket;
+        if (file.includes("caliper")) {
+            gcpBucket = process.env.GCP_CALIPER_BUCKET_NAME;
+        } else if (file.includes("stillwater") || file.includes("Metrc")) {
+            gcpBucket = process.env.GCP_STILLWATER_BUCKET_NAME;
+        }
+
+        // gcp bucket/file/metadata info
+        const bucketName = storage.bucket(gcpBucket);
+        // const file = bucketName.file(`${collectionName}-${Date.now()}.jsonl`);
+        const gcpFile = bucketName.file(file);
+        const metadata = {
+            metadata: { contentType: "application/octet-stream" },
+        };
+
+        // writes file to gcp and deletes file when successful
+        fs.createReadStream(`./tmp/${file}`)
+            .pipe(gcpFile.createWriteStream(metadata))
+            .on("error", (err) => {
+                console.log("GCP upload error", err);
+            })
+            .on("finish", () => {
+                console.log(`${file} file uploaded`);
+                // if upload is successful, delete file
+                fs.unlink(`./tmp/${file}`, (err) => {
+                    if (err) {
+                        console.log("error deleting file", err);
+                    } else {
+                        console.log(`${file} file deleted`);
+                    }
+                });
             });
-        });
-}
+    });
+};
 
 module.exports = { writeAll };
