@@ -6,7 +6,10 @@ const fs = require("fs").promises;
 const filterObjectKeys = (obj) => {
     const newObj = {};
     for (const [key, value] of Object.entries(obj)) {
-        const filteredKey = key.replace(/[^a-zA-Z0-9_]/g, "_");
+        let filteredKey = key.replace(/[^a-zA-Z0-9_]/g, "_");
+        if (filteredKey === "1__Off") {
+            filteredKey = "Dollar_Off";
+        }
         newObj[filteredKey] = obj[key];
     }
     return newObj;
