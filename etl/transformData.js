@@ -60,25 +60,25 @@ async function transformData(collectionName, query) {
     // retrieves collection data
     let buildSheet = await retrieveCollection(query, collectionName);
 
-    // if buildSheet has more than 2000 items, create files 2000 items at a time
-    if (buildSheet.length > 2000) {
+    // if buildSheet has more than 5000 items, create files 5000 items at a time
+    if (buildSheet.length > 5000) {
         let start = 0;
-        let end = 2000;
+        let end = 5000;
         let buildSheetArr = [];
 
         while (start < buildSheet.length) {
             const subBuildSheet = buildSheet.slice(start, end);
             buildSheetArr.push(subBuildSheet);
-            start += 2000;
+            start += 5000;
             end =
-                end + 2000 < buildSheet.length ? end + 2000 : buildSheet.length;
+                end + 5000 < buildSheet.length ? end + 5000 : buildSheet.length;
         }
 
         for (let i in buildSheetArr) {
             transformAndCreateFile(buildSheetArr[i], `${collectionName}-${i}`);
         }
-        // if fewer than 2000 items, creates single file
-    } else if (buildSheet.length <= 2000) {
+        // if fewer than 5000 items, creates single file
+    } else if (buildSheet.length <= 5000) {
         transformAndCreateFile(buildSheet, collectionName);
     }
 }

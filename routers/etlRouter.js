@@ -7,8 +7,8 @@ const { getCollectionNames } = require("../collections/retrievedCollections");
 
 // handles /api/etl get requests
 router.get("/", async (req, res) => {
-    // const collections = collectionsInfo();
-    const collections = await getCollectionNames();
+    const collections = collectionsInfo();
+    // const collections = await getCollectionNames();
 
     try {
         await writeAll(collections);
@@ -25,11 +25,12 @@ router.get("/", async (req, res) => {
     }
 });
 
-router.get("/combine", async (req, res) => {
+// merges chunks and deletes from GCP
+router.delete("/", async (req, res) => {
     try {
         await combineMultiGCP();
         res.status(200).json({
-            message: "ETL Combination successful",
+            message: "ETL Combination and removal of chunks successful",
         });
     } catch (err) {
         console.log("etl combine error", err);
