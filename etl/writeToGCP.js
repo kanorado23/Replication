@@ -2,7 +2,7 @@
 const { transformData } = require("./transformData");
 const fs = require("fs");
 const path = require("path");
-const { Storage } = require("@google-cloud/storage");
+const { Storage, Bucket } = require("@google-cloud/storage");
 
 // GCP creds/info
 const projectID = process.env.GCP_PROJECT_ID;
@@ -20,12 +20,36 @@ const writeAll = async (collections) => {
         );
     }
 
-    // create array of files in tmp/
-    const fileNames = fs
-        .readdirSync("./tmp/")
-        .filter((file) => file !== ".DS_Store");
+    // store collections that are uploaded in chunks
+    const multiFileCollections = {};
 
-    // console.log("file names", fileNames);
+    // create array of files in tmp/
+    const fileNames = fs.readdirSync("./tmp/").filter((file) => {
+        // file !== ".DS_Store"
+        const isJSONL = file.includes(".jsonl");
+        if (isJSONL) {
+            const numIdx = file.indexOf("-");
+            if (numIdx > -1) {
+                const colName = file.slice(0, numIdx);
+
+                if (colName in multiFileCollections) {
+                    multiFileCollections[colName].push(file);
+                } else {
+                    // initializing key value pair if not on obj
+                    multiFileCollections[colName] = [file];
+                }
+            }
+        }
+
+        // filter out non-JSON-line files
+        return isJSONL;
+    });
+
+    // write multiFileCollections to temp
+    fs.writeFileSync(
+        "./tmp/previousTransfer.json",
+        JSON.stringify(multiFileCollections)
+    );
 
     fileNames.forEach(async (file) => {
         // gcp buckte name for caliper or stillwater
