@@ -53,6 +53,8 @@ const transformAndCreateFile = async (arr, collectionName) => {
     }
 };
 
+
+
 // create .jsonl file from retrieved data
 async function transformData(collectionName, query) {
     // retrieves collection data
