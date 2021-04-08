@@ -12,11 +12,11 @@ router.get("/", async (req, res) => {
     const collections = await getCollectionNames();
 
     try {
-        const qty = await writeAll(collections);
+        const previousTransfer = await writeAll(collections);
 
         console.log(
             `... ...Waiting ${
-                qty * 28 + 2
+                previousTransfer.qty * 28 + 2
             } seconds for uploads to complete... ...`
         );
         setTimeout(async () => {
@@ -29,22 +29,24 @@ router.get("/", async (req, res) => {
 
             try {
                 const extraWait =
-                    jsonlFiles.length == 0 ? 0 : jsonlFiles.length * 2000;
+                    jsonlFiles.length == 0 ? 0 : jsonlFiles.length * 10000;
 
                 console.log(
                     `... ... Waiting for an extra ${extraWait} ms for uploads to complete... ...`
                 );
                 setTimeout(async () => {
-                    await combineMultiGCP();
+                    // merges chunks and deletes from GCP
+                    await combineMultiGCP(
+                        previousTransfer.multiFileCollections
+                    );
                 }, extraWait);
-
-                // await combineMultiGCP();
 
                 setTimeout(() => {
                     res.status(200).json({
                         msg: "ETL Successful",
                     });
-                }, 1200);
+                }, previousTransfer.qty * 200 + 1200);
+                
             } catch (err) {
                 console.log("etl combine error", err);
                 res.status(500).json({
@@ -52,7 +54,8 @@ router.get("/", async (req, res) => {
                     error: err,
                 });
             }
-        }, qty * 28000 + 2000);
+            // set a 2000ms default delay
+        }, previousTransfer.qty * 28000 + 2000);
     } catch (err) {
         console.log("etl get error", err);
         res.status(500).json({
@@ -62,7 +65,6 @@ router.get("/", async (req, res) => {
     }
 });
 
-// merges chunks and deletes from GCP
 router.delete("/", async (req, res) => {
     try {
         await combineMultiGCP();

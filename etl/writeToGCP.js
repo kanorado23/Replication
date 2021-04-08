@@ -2,7 +2,7 @@
 const { transformData } = require("./transformData");
 const fs = require("fs");
 const path = require("path");
-const { Storage, Bucket } = require("@google-cloud/storage");
+const { Storage } = require("@google-cloud/storage");
 
 // GCP creds/info
 const projectID = process.env.GCP_PROJECT_ID;
@@ -13,11 +13,24 @@ const storage = new Storage({
 
 // writeToGCP for each collection in list
 const writeAll = async (collections) => {
+    let remaining = collections.length;
+    console.log(`Getting ${remaining} queries:`);
     for (const collection of collections) {
-        await transformData(
-            collection.collectionName,
-            collection.query ? collection.query : {}
-        );
+        try {
+            await transformData(
+                collection.collectionName,
+                collection.query ? collection.query : {}
+            );
+            remaining -= 1;
+            console.log(
+                `--${remaining} ${
+                    remaining == 1 ? "query" : "queries"
+                } remaining--`
+            );
+        } catch (err) {
+            console.log("Error transforming data");
+            throw err;
+        }
     }
 
     // store collections that are uploaded in chunks
@@ -48,13 +61,6 @@ const writeAll = async (collections) => {
         // filter out non-JSON-line files
         return isJSONL;
     });
-
-    // write multiFileCollections to temp
-    fs.writeFileSync(
-        "./tmp/previousTransfer.json",
-        JSON.stringify(multiFileCollections)
-    );
-    // fs.writeFileSync("./tmp/uploadQty.json", JSON.stringify(toCombine));
 
     fileNames.forEach(async (file) => {
         // gcp buckte name for caliper or stillwater
@@ -94,7 +100,7 @@ const writeAll = async (collections) => {
                 });
             });
     });
-    return toCombine;
+    return { qty: toCombine, multiFileCollections };
 };
 
 module.exports = { writeAll };
