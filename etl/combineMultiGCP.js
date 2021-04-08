@@ -13,7 +13,7 @@ const deleteGCPFile = async (fileNameArr, bucket) => {
     for (fileName of fileNameArr) {
         try {
             await bucket.deleteFiles({ prefix: fileName });
-            console.log(`Deleting ${fileName} from GCP`)
+            console.log(`Deleting ${fileName} from GCP`);
         } catch (err) {
             console.log(
                 `There was an error deleting the file: ${fileName} from GCP`
@@ -38,7 +38,9 @@ const combineMultiGCP = async () => {
 
     // loop over all collections with multiple files to use the GCP combine method
     Object.keys(previousTransfer).reduce(async (previousPromise, nextKey) => {
-        await previousPromise;
+        await previousPromise.catch((err) => {
+            throw err;
+        });
 
         let gcpBucket;
 
@@ -52,12 +54,18 @@ const combineMultiGCP = async () => {
         }
 
         const bucket = new Bucket(storage, gcpBucket);
-        return bucket.combine(previousTransfer[nextKey], nextKey);
+        return bucket
+            .combine(previousTransfer[nextKey], nextKey)
+            .catch((err) => {
+                throw err;
+            });
     }, Promise.resolve());
 
     // clean up and delete files stored on GCP after combining
     Object.keys(previousTransfer).reduce(async (previousPromise, nextKey) => {
-        await previousPromise;
+        await previousPromise.catch((err) => {
+            throw err;
+        });
 
         let gcpBucket;
 
@@ -71,7 +79,9 @@ const combineMultiGCP = async () => {
         }
 
         const bucket = new Bucket(storage, gcpBucket);
-        return deleteGCPFile(previousTransfer[nextKey], bucket);
+        return deleteGCPFile(previousTransfer[nextKey], bucket).catch((err) => {
+            throw err;
+        });
     }, Promise.resolve());
 
     // remove temp previousTransfer file

@@ -54,7 +54,7 @@ const writeAll = async (collections) => {
         "./tmp/previousTransfer.json",
         JSON.stringify(multiFileCollections)
     );
-    fs.writeFileSync("./tmp/uploadQty.json", JSON.stringify(toCombine));
+    // fs.writeFileSync("./tmp/uploadQty.json", JSON.stringify(toCombine));
 
     fileNames.forEach(async (file) => {
         // gcp buckte name for caliper or stillwater
@@ -94,6 +94,7 @@ const writeAll = async (collections) => {
                 });
             });
     });
+    return toCombine;
 };
 
 module.exports = { writeAll };

@@ -8,29 +8,37 @@ const fs = require("fs");
 
 // handles /api/etl get requests
 router.get("/", async (req, res) => {
-    const collections = collectionsInfo();
-    // const collections = await getCollectionNames();
+    // const collections = collectionsInfo();
+    const collections = await getCollectionNames();
 
     try {
-        await writeAll(collections);
-
-        const qty = JSON.parse(fs.readFileSync("./tmp/uploadQty.json"));
-        fs.unlink("./tmp/uploadQty.json", (err) => {
-            if (err) {
-                console.log("error deleting file", err);
-            } else {
-                console.log("uploadQty.json deleted");
-            }
-        });
+        const qty = await writeAll(collections);
 
         console.log(
-            `Waiting ${qty * 28 + 2} seconds for uploads to complete... ...`
+            `... ...Waiting ${
+                qty * 28 + 2
+            } seconds for uploads to complete... ...`
         );
         setTimeout(async () => {
             console.log("STARTING: COMBINING");
 
+            // check if all files were uploaded
+            const jsonlFiles = fs.readdirSync("./tmp/").filter((file) => {
+                return file.includes(".jsonl");
+            });
+
             try {
-                await combineMultiGCP();
+                const extraWait =
+                    jsonlFiles.length == 0 ? 0 : jsonlFiles.length * 2000;
+
+                console.log(
+                    `... ... Waiting for an extra ${extraWait} ms for uploads to complete... ...`
+                );
+                setTimeout(async () => {
+                    await combineMultiGCP();
+                }, extraWait);
+
+                // await combineMultiGCP();
 
                 setTimeout(() => {
                     res.status(200).json({
