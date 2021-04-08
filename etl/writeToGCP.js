@@ -54,6 +54,7 @@ const writeAll = async (collections) => {
         "./tmp/previousTransfer.json",
         JSON.stringify(multiFileCollections)
     );
+    fs.writeFileSync("./tmp/uploadQty.json", JSON.stringify(toCombine));
 
     fileNames.forEach(async (file) => {
         // gcp buckte name for caliper or stillwater
@@ -69,6 +70,7 @@ const writeAll = async (collections) => {
         // const file = bucketName.file(`${collectionName}-${Date.now()}.jsonl`);
         const gcpFile = bucketName.file(file);
         const metadata = {
+            resumable: false,
             metadata: { contentType: "application/octet-stream" },
         };
 
@@ -77,6 +79,7 @@ const writeAll = async (collections) => {
             .pipe(gcpFile.createWriteStream(metadata))
             .on("error", (err) => {
                 console.log("GCP upload error", err);
+                throw "GCP upload error";
             })
             .on("finish", () => {
                 console.log(`${file} file uploaded`);
@@ -84,14 +87,13 @@ const writeAll = async (collections) => {
                 fs.unlink(`./tmp/${file}`, (err) => {
                     if (err) {
                         console.log("error deleting file", err);
+                        throw "Error deleting file";
                     } else {
                         console.log(`${file} file deleted`);
                     }
                 });
             });
     });
-
-    return toCombine;
 };
 
 module.exports = { writeAll };

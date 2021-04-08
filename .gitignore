@@ -6,3 +6,6 @@ node_modules/
 
 # credentials
 prodCreds.json
+
+# tmp files
+/tmp/*
