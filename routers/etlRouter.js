@@ -27,33 +27,33 @@ router.get("/", async (req, res) => {
                 return file.includes(".jsonl");
             });
 
-            try {
-                const extraWait =
-                    jsonlFiles.length == 0 ? 0 : jsonlFiles.length * 10000;
+            const extraWait =
+                jsonlFiles.length == 0 ? 0 : jsonlFiles.length * 10000;
 
-                console.log(
-                    `... ... Waiting for an extra ${extraWait} ms for uploads to complete... ...`
-                );
-                setTimeout(async () => {
-                    // merges chunks and deletes from GCP
+            console.log(
+                `... ... Waiting for an extra ${extraWait} ms for uploads to complete... ...`
+            );
+            setTimeout(async () => {
+                // merges chunks and deletes from GCP
+                try {
                     await combineMultiGCP(
                         previousTransfer.multiFileCollections
                     );
-                }, extraWait);
-
-                setTimeout(() => {
-                    res.status(200).json({
-                        msg: "ETL Successful",
+                } catch (err) {
+                    console.log("etl combine error", err);
+                    res.status(500).json({
+                        message: "There was an error with combining ETL",
+                        error: err,
                     });
-                }, previousTransfer.qty * 200 + 1200);
-                
-            } catch (err) {
-                console.log("etl combine error", err);
-                res.status(500).json({
-                    message: "There was an error with combining ETL",
-                    error: err,
+                }
+            }, extraWait);
+
+            setTimeout(() => {
+                res.status(200).json({
+                    msg: "ETL Successful",
                 });
-            }
+            }, previousTransfer.qty * 200 + 1000);
+
             // set a 2000ms default delay
         }, previousTransfer.qty * 28000 + 2000);
     } catch (err) {
