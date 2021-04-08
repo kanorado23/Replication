@@ -22,6 +22,8 @@ const writeAll = async (collections) => {
 
     // store collections that are uploaded in chunks
     const multiFileCollections = {};
+    // track how many files need to be combined
+    let toCombine = 0;
 
     // create array of files in tmp/
     const fileNames = fs.readdirSync("./tmp/").filter((file) => {
@@ -38,6 +40,8 @@ const writeAll = async (collections) => {
                     // initializing key value pair if not on obj
                     multiFileCollections[colName] = [file];
                 }
+
+                toCombine += 1;
             }
         }
 
@@ -86,6 +90,8 @@ const writeAll = async (collections) => {
                 });
             });
     });
+
+    return toCombine;
 };
 
 module.exports = { writeAll };
