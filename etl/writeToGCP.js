@@ -2,7 +2,7 @@
 const { transformData } = require("./transformData");
 const fs = require("fs");
 const path = require("path");
-const { Storage, Bucket } = require("@google-cloud/storage");
+const { Storage } = require("@google-cloud/storage");
 
 // GCP creds/info
 const projectID = process.env.GCP_PROJECT_ID;
@@ -13,15 +13,30 @@ const storage = new Storage({
 
 // writeToGCP for each collection in list
 const writeAll = async (collections) => {
+    let remaining = collections.length;
+    console.log(`Getting ${remaining} queries:`);
     for (const collection of collections) {
-        await transformData(
-            collection.collectionName,
-            collection.query ? collection.query : {}
-        );
+        try {
+            await transformData(
+                collection.collectionName,
+                collection.query ? collection.query : {}
+            );
+            remaining -= 1;
+            console.log(
+                `--${remaining} ${
+                    remaining == 1 ? "query" : "queries"
+                } remaining--`
+            );
+        } catch (err) {
+            console.log("Error transforming data");
+            throw err;
+        }
     }
 
     // store collections that are uploaded in chunks
     const multiFileCollections = {};
+    // track how many files need to be combined
+    let toCombine = 0;
 
     // create array of files in tmp/
     const fileNames = fs.readdirSync("./tmp/").filter((file) => {
@@ -38,18 +53,14 @@ const writeAll = async (collections) => {
                     // initializing key value pair if not on obj
                     multiFileCollections[colName] = [file];
                 }
+
+                toCombine += 1;
             }
         }
 
         // filter out non-JSON-line files
         return isJSONL;
     });
-
-    // write multiFileCollections to temp
-    fs.writeFileSync(
-        "./tmp/previousTransfer.json",
-        JSON.stringify(multiFileCollections)
-    );
 
     fileNames.forEach(async (file) => {
         // gcp buckte name for caliper or stillwater
@@ -65,6 +76,7 @@ const writeAll = async (collections) => {
         // const file = bucketName.file(`${collectionName}-${Date.now()}.jsonl`);
         const gcpFile = bucketName.file(file);
         const metadata = {
+            resumable: false,
             metadata: { contentType: "application/octet-stream" },
         };
 
@@ -73,6 +85,7 @@ const writeAll = async (collections) => {
             .pipe(gcpFile.createWriteStream(metadata))
             .on("error", (err) => {
                 console.log("GCP upload error", err);
+                throw "GCP upload error";
             })
             .on("finish", () => {
                 console.log(`${file} file uploaded`);
@@ -80,12 +93,14 @@ const writeAll = async (collections) => {
                 fs.unlink(`./tmp/${file}`, (err) => {
                     if (err) {
                         console.log("error deleting file", err);
+                        throw "Error deleting file";
                     } else {
                         console.log(`${file} file deleted`);
                     }
                 });
             });
     });
+    return { qty: toCombine, multiFileCollections };
 };
 
 module.exports = { writeAll };

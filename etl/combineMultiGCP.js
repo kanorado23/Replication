@@ -1,5 +1,4 @@
 const path = require("path");
-const fs = require("fs");
 const { Storage, Bucket } = require("@google-cloud/storage");
 
 // GCP creds/info
@@ -13,7 +12,7 @@ const deleteGCPFile = async (fileNameArr, bucket) => {
     for (fileName of fileNameArr) {
         try {
             await bucket.deleteFiles({ prefix: fileName });
-            console.log(`Deleting ${fileName} from GCP`)
+            console.log(`Deleting ${fileName} from GCP`);
         } catch (err) {
             console.log(
                 `There was an error deleting the file: ${fileName} from GCP`
@@ -25,20 +24,12 @@ const deleteGCPFile = async (fileNameArr, bucket) => {
 };
 
 // Access GCP, Combine and Delete chunks to a single file
-const combineMultiGCP = async () => {
-    let previousTransfer;
-
-    try {
-        previousTransfer = JSON.parse(
-            fs.readFileSync("./tmp/previousTransfer.json")
-        );
-    } catch (err) {
-        throw "previousTransfer.json file not found; please run an 'etl/' get first";
-    }
-
+const combineMultiGCP = async (previousTransfer) => {
     // loop over all collections with multiple files to use the GCP combine method
     Object.keys(previousTransfer).reduce(async (previousPromise, nextKey) => {
-        await previousPromise;
+        await previousPromise.catch((err) => {
+            throw err;
+        });
 
         let gcpBucket;
 
@@ -52,12 +43,18 @@ const combineMultiGCP = async () => {
         }
 
         const bucket = new Bucket(storage, gcpBucket);
-        return bucket.combine(previousTransfer[nextKey], nextKey);
+        return bucket
+            .combine(previousTransfer[nextKey], `${nextKey}.jsonl`)
+            .catch((err) => {
+                throw err;
+            });
     }, Promise.resolve());
 
     // clean up and delete files stored on GCP after combining
     Object.keys(previousTransfer).reduce(async (previousPromise, nextKey) => {
-        await previousPromise;
+        await previousPromise.catch((err) => {
+            throw err;
+        });
 
         let gcpBucket;
 
@@ -71,17 +68,10 @@ const combineMultiGCP = async () => {
         }
 
         const bucket = new Bucket(storage, gcpBucket);
-        return deleteGCPFile(previousTransfer[nextKey], bucket);
+        return deleteGCPFile(previousTransfer[nextKey], bucket).catch((err) => {
+            throw err;
+        });
     }, Promise.resolve());
-
-    // remove temp previousTransfer file
-    fs.unlink("./tmp/previousTransfer.json", (err) => {
-        if (err) {
-            console.log("error deleting file", err);
-        } else {
-            console.log("previousTransfer.json deleted");
-        }
-    });
 };
 
 module.exports = { combineMultiGCP };
