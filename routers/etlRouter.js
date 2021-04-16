@@ -7,9 +7,16 @@ const { getCollectionNames } = require("../collections/retrievedCollections");
 const fs = require("fs");
 
 // handles /api/etl get requests
+// accepts a query param of 'name' to filter which collections are used
+//     Ex: `/api/etl/?name=woo`
 router.get("/", async (req, res) => {
+    const { name } = req.query;
     // const collections = collectionsInfo();
-    const collections = await getCollectionNames();
+    const collections = name
+        ? await (await getCollectionNames()).filter((str) =>
+              str.collectionName.includes(name)
+          )
+        : await getCollectionNames();
 
     try {
         const previousTransfer = await writeAll(collections);
@@ -60,21 +67,6 @@ router.get("/", async (req, res) => {
         console.log("etl get error", err);
         res.status(500).json({
             message: "There was an error with ETL",
-            error: err,
-        });
-    }
-});
-
-router.delete("/", async (req, res) => {
-    try {
-        await combineMultiGCP();
-        res.status(200).json({
-            message: "ETL Combination and removal of chunks successful",
-        });
-    } catch (err) {
-        console.log("etl combine error", err);
-        res.status(500).json({
-            message: "There was an error with combining ETL",
             error: err,
         });
     }
