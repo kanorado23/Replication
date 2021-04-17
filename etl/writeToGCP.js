@@ -43,14 +43,13 @@ const writeAll = async (collections) => {
 
     // create array of files in tmp/
     const fileNames = fs.readdirSync("./tmp/").filter((file) => {
-        // file !== ".DS_Store"
         const isJSONL = file.includes(".jsonl");
         if (isJSONL) {
             const numIdx = file.indexOf("-");
             if (numIdx > -1) {
                 const colName = file.slice(0, numIdx);
 
-                if (colName in multiFileCollections) {
+                if (multiFileCollections.hasOwnProperty(colName)) {
                     multiFileCollections[colName].push(file);
                 } else {
                     // initializing key value pair if not on obj
