@@ -3,6 +3,11 @@ const { transformData } = require("./transformData");
 const fs = require("fs");
 const path = require("path");
 const { Storage } = require("@google-cloud/storage");
+const util = require("util");
+const stream = require("stream");
+
+// Creates a wrapper so that stream pipeline can use await like a Promise
+const pipeline = util.promisify(stream.pipeline);
 
 // GCP creds/info
 const projectID = process.env.GCP_PROJECT_ID;
@@ -14,7 +19,9 @@ const storage = new Storage({
 // writeToGCP for each collection in list
 const writeAll = async (collections) => {
     let remaining = collections.length;
-    console.log(`Getting ${remaining} queries:`);
+    console.log(
+        `Getting ${remaining} ${remaining === 1 ? "query" : "queries"}:`
+    );
     for (const collection of collections) {
         try {
             await transformData(
@@ -62,7 +69,7 @@ const writeAll = async (collections) => {
         return isJSONL;
     });
 
-    fileNames.forEach(async (file) => {
+    for await (file of fileNames) {
         // gcp buckte name for caliper or stillwater
         let gcpBucket;
         if (file.includes("caliper")) {
@@ -81,13 +88,11 @@ const writeAll = async (collections) => {
         };
 
         // writes file to gcp and deletes file when successful
-        fs.createReadStream(`./tmp/${file}`)
-            .pipe(gcpFile.createWriteStream(metadata))
-            .on("error", (err) => {
-                console.log("GCP upload error", err);
-                throw "GCP upload error";
-            })
-            .on("finish", () => {
+        await pipeline(
+            fs.createReadStream(`./tmp/${file}`),
+            gcpFile.createWriteStream(metadata)
+        )
+            .then((res) => {
                 console.log(`${file} file uploaded`);
                 // if upload is successful, delete file
                 fs.unlink(`./tmp/${file}`, (err) => {
@@ -98,8 +103,12 @@ const writeAll = async (collections) => {
                         console.log(`${file} file deleted`);
                     }
                 });
+            })
+            .catch((err) => {
+                console.log("GCP upload error", err);
+                throw err;
             });
-    });
+    }
     return { qty: toCombine, multiFileCollections };
 };
 

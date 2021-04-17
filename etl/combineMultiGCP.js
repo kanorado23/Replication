@@ -9,7 +9,7 @@ const storage = new Storage({
 });
 
 const deleteGCPFile = async (fileNameArr, bucket) => {
-    for (fileName of fileNameArr) {
+    for await (fileName of fileNameArr) {
         try {
             await bucket.deleteFiles({ prefix: fileName });
             console.log(`Deleting ${fileName} from GCP`);
@@ -25,53 +25,40 @@ const deleteGCPFile = async (fileNameArr, bucket) => {
 
 // Access GCP, Combine and Delete chunks to a single file
 const combineMultiGCP = async (previousTransfer) => {
+    const keys = Object.keys(previousTransfer);
     // loop over all collections with multiple files to use the GCP combine method
-    Object.keys(previousTransfer).reduce(async (previousPromise, nextKey) => {
-        await previousPromise.catch((err) => {
-            throw err;
-        });
-
+    for await (key of keys) {
         let gcpBucket;
 
-        if (nextKey.includes("caliper")) {
+        if (key.includes("caliper")) {
             gcpBucket = process.env.GCP_CALIPER_BUCKET_NAME;
-        } else if (
-            nextKey.includes("stillwater") ||
-            nextKey.includes("Metrc")
-        ) {
+        } else if (key.includes("stillwater") || key.includes("Metric")) {
             gcpBucket = process.env.GCP_STILLWATER_BUCKET_NAME;
         }
 
         const bucket = new Bucket(storage, gcpBucket);
-        return bucket
-            .combine(previousTransfer[nextKey], `${nextKey}.jsonl`)
+        await bucket
+            .combine(previousTransfer[key], `${key}.jsonl`)
             .catch((err) => {
                 throw err;
             });
-    }, Promise.resolve());
+    }
 
     // clean up and delete files stored on GCP after combining
-    Object.keys(previousTransfer).reduce(async (previousPromise, nextKey) => {
-        await previousPromise.catch((err) => {
-            throw err;
-        });
-
+    for await (key of keys) {
         let gcpBucket;
 
-        if (nextKey.includes("caliper")) {
+        if (key.includes("caliper")) {
             gcpBucket = process.env.GCP_CALIPER_BUCKET_NAME;
-        } else if (
-            nextKey.includes("stillwater") ||
-            nextKey.includes("Metrc")
-        ) {
+        } else if (key.includes("stillwater") || key.includes("Metric")) {
             gcpBucket = process.env.GCP_STILLWATER_BUCKET_NAME;
         }
 
         const bucket = new Bucket(storage, gcpBucket);
-        return deleteGCPFile(previousTransfer[nextKey], bucket).catch((err) => {
+        await deleteGCPFile(previousTransfer[key], bucket).catch((err) => {
             throw err;
         });
-    }, Promise.resolve());
+    }
 };
 
 module.exports = { combineMultiGCP };
