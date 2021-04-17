@@ -14,9 +14,7 @@ const deleteGCPFile = async (fileNameArr, bucket) => {
             await bucket.deleteFiles({ prefix: fileName });
             console.log(`Deleting ${fileName} from GCP`);
         } catch (err) {
-            console.log(
-                `There was an error deleting the file: ${fileName} from GCP`
-            );
+            console.log(`There was an error deleting the file: ${fileName} from GCP`);
             throw err;
         }
     }
@@ -32,29 +30,16 @@ const combineMultiGCP = async (previousTransfer) => {
 
         if (key.includes("caliper")) {
             gcpBucket = process.env.GCP_CALIPER_BUCKET_NAME;
-        } else if (key.includes("stillwater") || key.includes("Metric")) {
+        } else if (key.includes("stillwater") || key.includes("Metrc")) {
             gcpBucket = process.env.GCP_STILLWATER_BUCKET_NAME;
         }
 
         const bucket = new Bucket(storage, gcpBucket);
-        await bucket
-            .combine(previousTransfer[key], `${key}.jsonl`)
-            .catch((err) => {
-                throw err;
-            });
-    }
+        await bucket.combine(previousTransfer[key], `${key}.jsonl`).catch((err) => {
+            throw err;
+        });
 
-    // clean up and delete files stored on GCP after combining
-    for await (key of keys) {
-        let gcpBucket;
-
-        if (key.includes("caliper")) {
-            gcpBucket = process.env.GCP_CALIPER_BUCKET_NAME;
-        } else if (key.includes("stillwater") || key.includes("Metric")) {
-            gcpBucket = process.env.GCP_STILLWATER_BUCKET_NAME;
-        }
-
-        const bucket = new Bucket(storage, gcpBucket);
+        // clean up and delete files stored on GCP after combining
         await deleteGCPFile(previousTransfer[key], bucket).catch((err) => {
             throw err;
         });
