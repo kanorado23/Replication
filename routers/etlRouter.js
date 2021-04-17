@@ -10,24 +10,20 @@ const fs = require("fs");
 // accepts a query param of 'name' to filter which collections are used
 //     Ex: `/api/etl/?name=woo`
 router.get("/", async (req, res) => {
-    // const { name } = req.query;
+    // grab name off query & if name exists, set it lowercase
     const name = req.query.name?.toLowerCase();
-
-    // res.status(200).json(name)
-    // const collections = collectionsInfo();
     let collections = [];
-
     try {
+        collections = await getCollectionNames();
         if (name) {
-            collections = await (await getCollectionNames()).filter((str) =>
-                str.collectionName.includes(name)
+            collections = collections.filter((col) =>
+                col.collectionName.includes(name)
             );
-        } else {
-            collections = await getCollectionNames();
         }
     } catch (err) {
         res.status(500).json({ message: "Error accessing MongoDB", err });
     }
+    // const collections = collectionsInfo();
 
     try {
         const previousTransfer = await writeAll(collections);
@@ -67,6 +63,7 @@ router.get("/", async (req, res) => {
             }, extraWait);
 
             setTimeout(() => {
+                console.log("      End of request     ");
                 res.status(200).json({
                     msg: "ETL Successful",
                 });
