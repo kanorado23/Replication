@@ -19,10 +19,8 @@ const storage = new Storage({
 // writeToGCP for each collection in list
 const writeAll = async (collections) => {
     let remaining = collections.length;
-    console.log(
-        `Getting ${remaining} ${remaining === 1 ? "query" : "queries"}:`
-    );
-    for (const collection of collections) {
+    console.log(`Getting ${remaining} ${remaining === 1 ? "query" : "queries"}:`);
+    for await (const collection of collections) {
         try {
             await transformData(
                 collection.collectionName,
@@ -30,9 +28,7 @@ const writeAll = async (collections) => {
             );
             remaining -= 1;
             console.log(
-                `--${remaining} ${
-                    remaining == 1 ? "query" : "queries"
-                } remaining--`
+                `--${remaining} ${remaining == 1 ? "query" : "queries"} remaining--`
             );
         } catch (err) {
             console.log("Error transforming data");

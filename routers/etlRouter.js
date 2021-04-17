@@ -15,11 +15,13 @@ router.get("/", async (req, res) => {
 
     try {
         console.log("---     Start of Request     ---");
-        let collections = await (await getCollectionNames()).filter(
-            (collection) => {
-                return name && collection.collectionName.toLowerCase().includes(name);
-            }
-        );
+        let collections = await getCollectionNames();
+
+        if (name) {
+            collections = collections.filter((col) =>
+                col.collectionName.toLowerCase().includes(name)
+            );
+        }
 
         if (collections.length === 0) {
             throw `${name} not found in Collections names`;
@@ -27,10 +29,12 @@ router.get("/", async (req, res) => {
             console.log("---     Transforming & Uploading Data     ---");
             const previousTransfer = await writeAll(collections);
 
-            console.log(
-                "---     Checking for & Combining Chunked Files     ---"
-            );
-            await combineMultiGCP(previousTransfer.multiFileCollections);
+            if (previousTransfer.qty > 0) {
+                console.log("---     Checking for & Combining Chunked Files     ---");
+                await combineMultiGCP(previousTransfer.multiFileCollections);
+            } else {
+                console.log("---     No Chunked Files - Skipping Combine     ---");
+            }
 
             console.log("---     End of request (SUCCESS)     ---");
             res.status(200).json({
