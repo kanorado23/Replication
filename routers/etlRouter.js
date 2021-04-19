@@ -7,74 +7,45 @@ const { getCollectionNames } = require("../collections/retrievedCollections");
 const fs = require("fs");
 
 // handles /api/etl get requests
+// accepts a query param of 'name' to filter which collections are used
+//     Ex: `/api/etl/?name=woo`
 router.get("/", async (req, res) => {
-    // const collections = collectionsInfo();
-    const collections = await getCollectionNames();
+    // grab name off query & if name exists, set it lowercase
+    const name = req.query.name?.toLowerCase();
 
     try {
-        const previousTransfer = await writeAll(collections);
+        console.log("---     Start of Request     ---");
+        let collections = await getCollectionNames();
 
-        console.log(
-            `... ...Waiting ${
-                previousTransfer.qty * 28 + 2
-            } seconds for uploads to complete... ...`
-        );
-        setTimeout(async () => {
-            console.log("STARTING: COMBINING");
-
-            // check if all files were uploaded
-            const jsonlFiles = fs.readdirSync("./tmp/").filter((file) => {
-                return file.includes(".jsonl");
-            });
-
-            const extraWait =
-                jsonlFiles.length == 0 ? 0 : jsonlFiles.length * 10000;
-
-            console.log(
-                `... ... Waiting for an extra ${extraWait} ms for uploads to complete... ...`
+        if (name) {
+            collections = collections.filter((col) =>
+                col.collectionName.toLowerCase().includes(name)
             );
-            setTimeout(async () => {
-                // merges chunks and deletes from GCP
-                try {
-                    await combineMultiGCP(
-                        previousTransfer.multiFileCollections
-                    );
-                } catch (err) {
-                    console.log("etl combine error", err);
-                    res.status(500).json({
-                        message: "There was an error with combining ETL",
-                        error: err,
-                    });
-                }
-            }, extraWait);
+        }
 
-            setTimeout(() => {
-                res.status(200).json({
-                    msg: "ETL Successful",
-                });
-            }, previousTransfer.qty * 200 + 1000);
+        if (collections.length === 0) {
+            throw `${name} not found in Collections names`;
+        } else {
+            console.log("---     Transforming & Uploading Data     ---");
+            const previousTransfer = await writeAll(collections);
 
-            // set a 2000ms default delay
-        }, previousTransfer.qty * 28000 + 2000);
+            if (previousTransfer.qty > 0) {
+                console.log("---     Checking for & Combining Chunked Files     ---");
+                await combineMultiGCP(previousTransfer.multiFileCollections);
+            } else {
+                console.log("---     No Chunked Files - Skipping Combine     ---");
+            }
+
+            console.log("---     End of request (SUCCESS)     ---");
+            res.status(200).json({
+                message: "ETL successful",
+            });
+        }
     } catch (err) {
-        console.log("etl get error", err);
+        console.log("---     End of request (ERROR)     ---");
+        console.log("etl error", err);
         res.status(500).json({
-            message: "There was an error with ETL",
-            error: err,
-        });
-    }
-});
-
-router.delete("/", async (req, res) => {
-    try {
-        await combineMultiGCP();
-        res.status(200).json({
-            message: "ETL Combination and removal of chunks successful",
-        });
-    } catch (err) {
-        console.log("etl combine error", err);
-        res.status(500).json({
-            message: "There was an error with combining ETL",
+            message: "There was an error with etl",
             error: err,
         });
     }

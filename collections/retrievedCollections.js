@@ -23,6 +23,7 @@ async function getCollectionNames() {
         return collectionsArr;
     } catch (error) {
         console.log("collection names retrieval error", error);
+        throw error
     } finally {
         await client.close();
     }
