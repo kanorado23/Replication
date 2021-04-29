@@ -13,7 +13,7 @@ router.get("/", async (req, res) => {
     const name = req.query.name?.toLowerCase();
 
     try {
-        console.log("\x1b[32m%s\x1b[0m", "---     Start of Request     ---");
+        console.log("\x1b[36m%s\x1b[0m", "---     Start of Request     ---");
         let collections = await getCollectionNames();
 
         if (name) {
