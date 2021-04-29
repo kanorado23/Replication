@@ -18,7 +18,7 @@ const filterObjectKeys = (obj) => {
 const transformMisc = (arr) => {
     let newStr = "";
 
-    for (i in arr) {
+    for (const i in arr) {
         // changes key from _id to mdb_id
         if (arr[i]["_id"]) {
             arr[i] = { mdb_id: arr[i]["_id"], ...arr[i] };
@@ -27,7 +27,7 @@ const transformMisc = (arr) => {
 
         // filters first layer of object keys
         arr[i] = filterObjectKeys(arr[i]);
-        for (j in arr[i]) {
+        for (const j in arr[i]) {
             // filters nested layer of object keys
             if (
                 typeof arr[i][j] === "object" &&
@@ -49,7 +49,7 @@ const transformMisc = (arr) => {
 const transformWoo = (arr) => {
     let newStr = "";
 
-    for (i in arr) {
+    for (const i in arr) {
         // changes key from _id to mdb_id
         if (arr[i]["_id"]) {
             arr[i] = { mdb_id: arr[i]["_id"], ...arr[i] };
@@ -58,26 +58,27 @@ const transformWoo = (arr) => {
 
         // filters first layer of object keys
         arr[i] = filterObjectKeys(arr[i]);
-        for (j in arr[i]) {
+        for (const j in arr[i]) {
             // filters nested layer of object keys
             if (
                 typeof arr[i][j] === "object" &&
                 arr[i][j] !== null &&
                 j !== "mdb_id" &&
                 j !== "meta_data" &&
+                j !== "_links" &&
                 !Array.isArray(arr[i][j])
             ) {
                 arr[i][j] = filterObjectKeys(arr[i][j]);
             }
 
-            if (j === "meta_data") {
+            // Stringify deeply nested objects
+            if (j === "meta_data" || j === "_links") {
                 arr[i][j] = JSON.stringify(arr[i][j]);
             }
 
-            // console.log(j, Array.isArray(arr[i][j]));
             if (Array.isArray(arr[i][j])) {
-                for (k in arr[i][j]) {
-                    for (l in arr[i][j][k])
+                for (const k in arr[i][j]) {
+                    for (const l in arr[i][j][k])
                         if (l === "meta_data") {
                             arr[i][j][k][l] = JSON.stringify(arr[i][j][k][l]);
                         }
@@ -116,12 +117,10 @@ const transformAndCreateFile = async (arr, collectionName) => {
 // create .jsonl file from retrieved data
 async function transformData(collectionName, query) {
     // retrieves collection data
-    let buildSheet = await retrieveCollection(query, collectionName).catch(
-        (err) => {
-            console.log("Error retrieveing from MongoDB", err);
-            throw err;
-        }
-    );
+    let buildSheet = await retrieveCollection(query, collectionName).catch((err) => {
+        console.log("Error retrieveing from MongoDB", err);
+        throw err;
+    });
 
     // if buildSheet has more than 5000 items, create files 5000 items at a time
     if (buildSheet.length > 5000) {
@@ -133,8 +132,7 @@ async function transformData(collectionName, query) {
             const subBuildSheet = buildSheet.slice(start, end);
             buildSheetArr.push(subBuildSheet);
             start += 5000;
-            end =
-                end + 5000 < buildSheet.length ? end + 5000 : buildSheet.length;
+            end = end + 5000 < buildSheet.length ? end + 5000 : buildSheet.length;
         }
 
         for (let i in buildSheetArr) {

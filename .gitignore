@@ -7,5 +7,7 @@ node_modules/
 # credentials
 prodCreds.json
 
-# tmp files
-/tmp/*
+# exclude everything in tmp folder
+tmp/*
+# exception to the rule
+!tmp/.gitkeep 

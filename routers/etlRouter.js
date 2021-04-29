@@ -4,7 +4,6 @@ const { writeAll } = require("../etl/writeToGCP");
 const { combineMultiGCP } = require("../etl/combineMultiGCP");
 const { collectionsInfo } = require("../collections/collectionsInfo");
 const { getCollectionNames } = require("../collections/retrievedCollections");
-const fs = require("fs");
 
 // handles /api/etl get requests
 // accepts a query param of 'name' to filter which collections are used
@@ -14,7 +13,7 @@ router.get("/", async (req, res) => {
     const name = req.query.name?.toLowerCase();
 
     try {
-        console.log("---     Start of Request     ---");
+        console.log("\x1b[32m%s\x1b[0m", "---     Start of Request     ---");
         let collections = await getCollectionNames();
 
         if (name) {
@@ -35,14 +34,13 @@ router.get("/", async (req, res) => {
             } else {
                 console.log("---     No Chunked Files - Skipping Combine     ---");
             }
-
-            console.log("---     End of request (SUCCESS)     ---");
+            console.log("\x1b[32m%s\x1b[0m", "---     End of request (SUCCESS)     ---");
             res.status(200).json({
                 message: "ETL successful",
             });
         }
     } catch (err) {
-        console.log("---     End of request (ERROR)     ---");
+        console.log("\x1b[31m%s\x1b[0m", "---     End of request (ERROR)     ---");
         console.log("etl error", err);
         res.status(500).json({
             message: "There was an error with etl",
