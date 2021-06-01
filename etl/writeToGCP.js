@@ -64,7 +64,7 @@ const writeAll = async (collections) => {
         return isJSONL;
     });
 
-    for await (file of fileNames) {
+    for await (const file of fileNames) {
         // gcp buckte name for caliper or stillwater
         let gcpBucket;
         if (file.includes("caliper")) {
