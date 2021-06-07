@@ -5,46 +5,40 @@ const fs = require("fs").promises;
 // replaces any character in object keys that is not a letter, number, or underscore with underscore
 const filterObjectKeys = (obj) => {
   const newObj = {};
-  for (const [key, value] of Object.entries(obj)) {
+  for (const key of Object.keys(obj)) {
     let filteredKey = key.replace(/[^a-zA-Z0-9_]/g, "_");
     if (filteredKey === "1__Off") {
       filteredKey = "Dollar_Off";
     }
-
     newObj[filteredKey] = obj[key];
-    const isArray = Array.isArray(value);
+  }
+  return newObj;
+};
+
+// implements filterObjectKeys, but adds a check for 'tax' related fields on Woo objects & Stringifies the entire JSON object
+const filterObjectKeysWoo = (obj) => {
+  const newObj = filterObjectKeys(obj);
+
+  for (const [key, value] of Object.entries(obj)) {
     // for Woo.Subscriptions
-    if (
-      isArray &&
-      (filteredKey === "shipping_lines" || filteredKey === "line_items")
-    ) {
-      console.log("-------------------------------------------");
-      console.log(filteredKey);
+    const isArray = Array.isArray(value);
+    const keysWithTax = ["shipping_lines", "line_items", "removed_line_items"];
+    if (isArray && keysWithTax.includes(key)) {
       for (let i = 0; i < value.length; i++) {
         if (value[i].taxes) {
           for (let j = 0; j < value[i].taxes.length; j++) {
-            console.log(obj[filteredKey][i].taxes[j].id);
-            console.log(value[i].taxes[j].id);
-            newObj[filteredKey][i].taxes[j] = toString(value[i].taxes[j].id);
+            newObj[key][i].taxes[j] = JSON.stringify(value[i].taxes[j]);
           }
         }
       }
-      console.log("-------------------------------------------");
     }
-
-    if (isArray && filteredKey === "tax_lines") {
-      console.log("-------------------------------------------");
-      console.log(filteredKey);
+    if (isArray && key === "tax_lines") {
       for (let i = 0; i < value.length; i++) {
-        console.log(value[i].rate_id);
-        if (value[i].rate_id) {
-          newObj[filteredKey][i].rate_id = toString(value[i].rate_id);
-        }
-
-        console.log("-------------------------------------------");
+        newObj[key][i] = JSON.stringify(value[i]);
       }
     }
   }
+
   return newObj;
 };
 
@@ -90,7 +84,7 @@ const transformWoo = (arr) => {
     }
 
     // filters first layer of object keys
-    arr[i] = filterObjectKeys(arr[i]);
+    arr[i] = filterObjectKeysWoo(arr[i]);
     for (const j in arr[i]) {
       // filters nested layer of object keys
       if (
@@ -101,7 +95,7 @@ const transformWoo = (arr) => {
         j !== "_links" &&
         !Array.isArray(arr[i][j])
       ) {
-        arr[i][j] = filterObjectKeys(arr[i][j]);
+        arr[i][j] = filterObjectKeysWoo(arr[i][j]);
       }
 
       // Stringify deeply nested objects
